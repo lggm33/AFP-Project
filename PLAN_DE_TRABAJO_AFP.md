@@ -39,33 +39,35 @@
 
 ## 🏗️ **ARQUITECTURA DEL PROYECTO**
 
-### **📐 Patrón Arquitectural: Django API + TypeScript Frontend**
+### **📐 Patrón Arquitectural: Django API + Vite React PWA Multi-Provider**
 
 ```
-🌐 TypeScript Frontend (Next.js)
-    ↕️ REST API
-🐍 Django Backend + Workers
-    ↕️ Queue System  
-⚙️ Python Email Processing Core
-    ↕️ Database
+🌐 Vite React PWA Frontend (installable, multi-provider auth)
+    ↕️ REST API (django-allauth social tokens)
+🐍 Django Backend + Multi-Provider OAuth (Google, Outlook, Yahoo+)
+    ↕️ Background Workers + Queue System  
+⚙️ Multi-Email Processing Engine (Gmail API, Graph API, Yahoo API)
+    ↕️ Database + Social Tokens Management
 📊 PostgreSQL + Redis
 ```
 
 ### **🎯 División de Responsabilidades**
 
-#### **80% - Stack Estándar (Django + TypeScript)**
-- ✅ **User management** (Django auth)
+#### **80% - Stack Estándar (Django + Vite React)**
+- ✅ **Multi-Provider Authentication** (django-allauth: Google, Outlook, Yahoo+)
+- ✅ **User management** (Django auth + social accounts)
 - ✅ **Subscriptions** (django-subscriptions + Stripe)
 - ✅ **Admin dashboard** (Django admin)
-- ✅ **API REST** (Django REST Framework)
-- ✅ **Frontend moderno** (Next.js + TypeScript)
+- ✅ **API REST** (Django REST Framework + social tokens)
+- ✅ **Frontend moderno** (Vite + React + TypeScript PWA)
 
 #### **20% - Nuestro Diferenciador (Python Optimizado)**
-- 🔥 **Email processing** system
+- 🔥 **Multi-email processing** system (Gmail + Outlook + Yahoo)
 - 🔥 **AI pattern generation** (OpenAI integration)
 - 🔥 **Multi-bank strategies** para diferentes tipos de transacciones
 - 🔥 **Background workers** robustos (Celery)
 - 🔥 **Financial analytics** engine
+- 🔥 **Social tokens management** for multi-provider email access
 
 ---
 
@@ -107,23 +109,72 @@ afp-project/
 │   │   └── email_classifier.py    # Classify emails
 │   └── requirements.txt
 │
-├── frontend/                   # 🟨 TypeScript Frontend
-│   ├── apps/
-│   │   ├── web/                   # Next.js customer app
-│   │   │   ├── app/               # Modern app router
-│   │   │   ├── components/        # UI components
-│   │   │   ├── lib/               # API client, utils
-│   │   │   └── hooks/             # React hooks
-│   │   └── admin/                 # Next.js admin dashboard (optional)
-│   ├── packages/
-│   │   ├── ui/                    # Shared components (shadcn/ui)
-│   │   ├── api-client/            # Django API client
-│   │   └── types/                 # Shared TypeScript types
+├── frontend/                   # 🟨 Vite React PWA Frontend
+│   ├── src/
+│   │   ├── components/            # UI components (shadcn/ui)
+│   │   ├── pages/                 # App pages/routes + auth providers
+│   │   ├── lib/                   # API client, utils, multi-provider
+│   │   ├── hooks/                 # React hooks + auth hooks
+│   │   ├── store/                 # Zustand stores + auth store
+│   │   └── types/                 # TypeScript types
+│   ├── public/
+│   │   ├── manifest.json          # PWA manifest
+│   │   └── sw.js                  # Service worker
+│   ├── vite.config.ts             # Vite + PWA config (NO Next.js)
 │   └── package.json
 │
 ├── docs/                      # 📚 Documentation
 ├── scripts/                   # 🧪 Setup and testing scripts
 └── README.md
+```
+
+---
+
+## 🔐 **ESTRATEGIA MULTI-PROVIDER AUTHENTICATION**
+
+### **🎯 Roadmap de Proveedores**
+```
+Phase 1: Google OAuth → Gmail API (ACTUAL)
+Phase 2: Microsoft OAuth → Outlook Graph API  
+Phase 3: Yahoo OAuth → Yahoo Mail API
+Phase 4: Future providers (iCloud, ProtonMail, etc.)
+```
+
+### **🏗️ Arquitectura Multi-Provider**
+```mermaid
+graph TD
+    A[Usuario] --> B[Página de Login]
+    B --> C[Selección de Proveedor]
+    C --> D["🔵 Google OAuth"]
+    C --> E["🔷 Microsoft OAuth"] 
+    C --> F["🟣 Yahoo OAuth"]
+    
+    D --> G[Gmail API Access]
+    E --> H[Outlook Graph API Access]
+    F --> I[Yahoo Mail API Access]
+    
+    G --> J[Django Backend]
+    H --> J
+    I --> J
+    
+    J --> K[Social Account Management]
+    K --> L[Token Refresh & Management]
+    L --> M[Multi-Email Processing Engine]
+    M --> N[AFP Dashboard]
+```
+
+### **🛠️ Implementación django-allauth**
+```python
+# Multi-provider configuration
+SOCIALACCOUNT_PROVIDERS = {
+    'google': { 'SCOPE': ['profile', 'email', 'gmail.readonly'] },
+    'microsoft': { 'SCOPE': ['user.read', 'mail.read'] },
+    'yahoo': { 'SCOPE': ['openid', 'profile', 'email'] },
+}
+
+# User can connect multiple email providers
+# Each provider gives access to different email APIs
+# Unified processing engine handles all email sources
 ```
 
 ---
@@ -192,16 +243,21 @@ graph TD
 - **Workers**: Celery (background job processing)
 - **AI**: OpenAI GPT-4 (pattern generation)
 - **Email**: Gmail API (email fetching)
-- **Auth**: Django auth + django-allauth (authentication)
+- **Auth**: Django auth + django-allauth (multi-provider authentication)
+- **Social Integration**: Google OAuth, Microsoft Graph, Yahoo OAuth
 - **Subscriptions**: django-subscriptions + Stripe (billing)
 
-### **🟨 Frontend Stack**
-- **Framework**: Next.js 14 (React with app router)
+### **🟨 Frontend Stack (Vite React PWA)**
+- **Framework**: React 18 + Vite (fast development & build, NO Next.js)
 - **Language**: TypeScript (type safety)
+- **Authentication**: Multi-provider support (Google, Outlook, Yahoo+)
+- **Routing**: React Router DOM (SPA routing)
 - **UI**: shadcn/ui + Tailwind CSS (modern UI components)
-- **State**: React hooks + TanStack Query (state management)
-- **API Client**: Custom TypeScript client for Django API
-- **Auth**: Next-auth or custom JWT handling
+- **State**: Zustand (lightweight state management)
+- **API Client**: React Query (caching & synchronization)
+- **Auth**: JWT tokens con Django REST Auth
+- **PWA**: Service Worker, Web App Manifest, Push Notifications
+- **Build**: Vite (fast HMR) con PWA plugin
 
 ### **📊 Database Implementation**
 
@@ -328,11 +384,12 @@ class EmailQueue(models.Model):
 - **Benefits**: Simple, cost-effective, Django native
 
 ### **⚙️ Infrastructure Stack**
-- **Deployment**: Railway (PaaS para MVP)
+- **Deployment**: Railway (unified full-stack deployment)
 - **Database**: Railway PostgreSQL
 - **Cache**: Railway Redis
 - **Workers**: Railway containers with Celery
-- **Frontend Deploy**: Railway o Vercel
+- **Frontend**: Railway static hosting (Vite build)
+- **PWA Features**: Service worker, push notifications, offline support
 - **Monitoring**: Built-in Railway monitoring
 - **Scaling**: Horizontal scaling via Railway
 
@@ -340,13 +397,13 @@ class EmailQueue(models.Model):
 
 ## 📅 **PLAN DE ACCIÓN - ETAPAS**
 
-### **🚀 FASE 1: SETUP DJANGO + NEXT.JS BASE (Semanas 1-2)**
+### **🚀 FASE 1: SETUP DJANGO + PWA REACT (Semanas 1-2)**
 
 #### **Objetivos:**
 - ✅ Django backend funcional con auth y subscriptions
-- ✅ Next.js frontend con login/registro
-- ✅ API REST básico conectado
-- ✅ Deployment en Railway funcionando
+- ✅ PWA React frontend con login/registro
+- ✅ API REST completo conectado
+- ✅ Deployment unified en Railway
 
 #### **Tareas Backend:**
 ```bash
@@ -368,16 +425,18 @@ class EmailQueue(models.Model):
 #### **Tareas Frontend:**
 ```bash
 # Week 1
-- Create Next.js project con TypeScript
+- Create React + Vite project con TypeScript
+- Setup PWA configuration (manifest, service worker)
 - Setup shadcn/ui component library
 - Implement login/register pages
-- Create basic dashboard layout
+- Create responsive dashboard layout
 
 # Week 2
-- Connect con Django API
+- Connect con Django API usando React Query
 - Implement subscription flow
-- Setup TypeScript API client
-- Deploy en Railway/Vercel
+- Setup Zustand state management
+- Configure PWA features (notifications, offline)
+- Deploy en Railway (static build)
 ```
 
 #### **Entregables:**
