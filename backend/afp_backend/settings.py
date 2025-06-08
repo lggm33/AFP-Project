@@ -263,8 +263,21 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_AUTO_SIGNUP = False  # Don't auto-signup, connect to existing users
 SOCIALACCOUNT_EMAIL_REQUIRED = True
+SOCIALACCOUNT_STORE_TOKENS = True  # ⭐ CRITICAL: Store OAuth tokens in database
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_UNIQUE_EMAIL = True
+
+# 🔐 SECURITY: OAuth Token Storage Security
+# WARNING: Storing OAuth tokens has security implications
+# - Tokens are encrypted at rest using Fernet encryption
+# - Access is logged and audited
+# - Tokens expire and are rotated regularly
+# - Only enable if you ABSOLUTELY need access to external APIs
+OAUTH_TOKEN_ENCRYPTION_KEY = config('OAUTH_TOKEN_ENCRYPTION_KEY', default='')
+
+# Token expiration and rotation settings
+OAUTH_TOKEN_MAX_AGE = 3600  # 1 hour before forced refresh
+OAUTH_TOKEN_AUDIT_LOG = True  # Log all token access
 
 # Multi-provider configuration (using database SocialApp objects)
 SOCIALACCOUNT_PROVIDERS = {

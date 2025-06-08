@@ -945,12 +945,15 @@ pip install celery[redis]
   - ✅ JWT authentication endpoints
   - ✅ User profile endpoints
 
-### **🔄 FASE 3: EN PROGRESO (25%)**
-**Microsoft OAuth + Gmail API Integration**
+### **🔄 FASE 3: EN PROGRESO (40%)**
+**Gmail API Integration + OAuth Debugging**
+- ✅ **Gmail API Service implementado** (GmailService class)
+- ✅ **Gmail API endpoints creados** (/test/, /messages/, /banking/, /process/)
+- ✅ **Frontend Gmail Test Page** implementada
+- ✅ **OAuth Token Storage BUG SOLUCIONADO** (SOCIALACCOUNT_STORE_TOKENS=True)
 - ⏳ Microsoft OAuth provider setup (PRÓXIMO)
-- ⏳ Gmail API integration para email reading
 - ⏳ Email processing workers con Celery
-- ⏳ Transaction extraction logic
+- ⏳ Transaction extraction logic con AI
 
 ### **⏳ PENDIENTES:**
 - **Fase 4**: AI Pattern Generation + Multi-bank Support
@@ -981,16 +984,57 @@ pip install celery[redis]
 
 ### **🎯 Próximos Hitos (Próximas 2 semanas):**
 
+---
+
+## 🐛 **RESOLUCIÓN DE BUG CRÍTICO: OAuth Token Storage**
+
+### **Problema Encontrado:**
+Durante las pruebas de Gmail API, se descubrió que los tokens OAuth no se estaban almacenando en la base de datos, causando el error:
+```
+Gmail service not initialized
+Connection Failed
+```
+
+### **Diagnóstico Realizado:**
+1. ✅ Usuario autenticado correctamente
+2. ✅ SocialAccount creado en la base de datos
+3. ✅ SocialApp (Google OAuth config) funcionando
+4. ❌ **SocialToken NO guardado** - Aquí estaba el problema
+
+### **Causa Raíz Identificada:**
+**`SOCIALACCOUNT_STORE_TOKENS = False` (por defecto en django-allauth)**
+
+Por razones de seguridad, django-allauth **NO almacena tokens OAuth por defecto**. Esto significa que aunque el OAuth flow funciona, no se pueden hacer llamadas a APIs externas como Gmail API.
+
+### **Solución Implementada:**
+```python
+# backend/afp_backend/settings.py
+SOCIALACCOUNT_STORE_TOKENS = True  # ⭐ CRITICAL: Store OAuth tokens in database
+```
+
+### **Pasos de Verificación:**
+1. ✅ Settings actualizado con `SOCIALACCOUNT_STORE_TOKENS = True`
+2. ✅ Estado OAuth limpiado para fresh start
+3. ⏳ **PRÓXIMO**: Re-autenticación con Google para verificar fix
+
+### **Impacto del Fix:**
+- 🔧 Gmail API ahora funcionará correctamente
+- 🔧 Tokens OAuth se almacenarán de forma segura en BD
+- 🔧 Base sólida para integración de Microsoft y Yahoo OAuth
+- 🔧 Foundation lista para email processing backend
+
+---
+
 #### **Esta Semana:**
-1. **Microsoft OAuth Integration**
+1. **Verificación OAuth Fix**
+   - Re-autenticación con Google para confirmar token storage
+   - Testing completo de Gmail API endpoints
+   - Validación de la solución implementada
+
+2. **Microsoft OAuth Integration**
    - Configurar Microsoft provider en django-allauth
    - Testing del OAuth flow con Outlook
    - Documentar el proceso completo
-
-2. **Gmail API Setup** 
-   - Integrar Gmail API con los tokens OAuth existentes
-   - Crear endpoints para email fetching
-   - Setup básico de email processing
 
 #### **Próxima Semana:**
 1. **Email Processing Engine**

@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard'
 import TransactionsPage from './pages/TransactionsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import SettingsPage from './pages/SettingsPage'
+import GmailTestPage from './pages/GmailTest'
 
 // Layouts
 import PublicLayout from './layouts/PublicLayout'
@@ -35,6 +36,7 @@ function App() {
             <Route path="transactions" element={<TransactionsPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="gmail-test" element={<GmailTestPage />} />
           </Route>
         </Route>
 

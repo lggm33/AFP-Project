@@ -20,7 +20,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken.views import obtain_auth_token
 
 # Import ViewSets
-from users.views import UserViewSet, UserProfileViewSet, SubscriptionViewSet, check_auth_status, oauth_callback_exchange, user_me, debug_oauth_session, oauth_success_redirect, logout_user, refresh_token
+from users.views import UserViewSet, UserProfileViewSet, SubscriptionViewSet, check_auth_status, oauth_callback_exchange, user_me, debug_oauth_session, oauth_success_redirect, logout_user, refresh_token, gmail_test_connection, gmail_recent_messages, gmail_banking_messages, gmail_process_banking_messages
 from banking.views import BankViewSet, EmailPatternViewSet
 from transactions.views import CategoryViewSet, TransactionViewSet, EmailQueueViewSet
 
@@ -64,6 +64,12 @@ urlpatterns = [
     # Authentication management endpoints
     path('api/auth/logout/', logout_user, name='logout_user'),
     path('api/auth/refresh/', refresh_token, name='refresh_token'),
+    
+    # Gmail API endpoints
+    path('api/gmail/test/', gmail_test_connection, name='gmail_test_connection'),
+    path('api/gmail/messages/', gmail_recent_messages, name='gmail_recent_messages'),
+    path('api/gmail/banking/', gmail_banking_messages, name='gmail_banking_messages'),
+    path('api/gmail/process/', gmail_process_banking_messages, name='gmail_process_banking_messages'),
     
     # Debug OAuth session endpoint
     path('api/debug/oauth/', debug_oauth_session, name='debug_oauth_session'),

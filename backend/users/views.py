@@ -19,6 +19,8 @@ from django.utils import timezone
 from urllib.parse import urlencode
 from allauth.socialaccount.models import SocialAccount
 import logging
+from datetime import datetime, timedelta
+from typing import Dict, Optional, Any
 
 logger = logging.getLogger(__name__)
 
@@ -390,3 +392,256 @@ def refresh_token(request):
     except Exception as e:
         logger.error(f"Error in refresh_token: {str(e)}")
         return Response({'error': 'Token refresh failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def gmail_test_connection(request):
+    """Test Gmail API connection for the current user"""
+    try:
+        from core.gmail_service import GmailService
+        
+        gmail_service = GmailService(request.user)
+        result = gmail_service.test_connection()
+        
+        if result['success']:
+            return Response({
+                'success': True,
+                'message': 'Gmail connection successful',
+                'data': result
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'success': False,
+                'message': 'Gmail connection failed',
+                'error': result['error']
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+    except Exception as e:
+        logger.error(f"Gmail test connection error for user {request.user.username}: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Gmail test failed',
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def gmail_recent_messages(request):
+    """Get recent Gmail messages for the current user"""
+    try:
+        from core.gmail_service import GmailService
+        
+        # Get query parameters
+        max_results = int(request.GET.get('max_results', 20))
+        days_back = int(request.GET.get('days_back', 7))
+        
+        # Validate parameters
+        max_results = min(max_results, 100)  # Limit to 100
+        days_back = min(days_back, 90)  # Limit to 90 days
+        
+        gmail_service = GmailService(request.user)
+        messages = gmail_service.get_recent_messages(max_results, days_back)
+        
+        return Response({
+            'success': True,
+            'count': len(messages),
+            'messages': messages,
+            'filters': {
+                'max_results': max_results,
+                'days_back': days_back
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Gmail recent messages error for user {request.user.username}: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get recent messages',
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def gmail_banking_messages(request):
+    """Get potential banking messages from Gmail"""
+    try:
+        from core.gmail_service import GmailService
+        
+        # Get query parameters
+        max_results = int(request.GET.get('max_results', 50))
+        days_back = int(request.GET.get('days_back', 30))
+        
+        # Validate parameters
+        max_results = min(max_results, 200)  # Limit to 200
+        days_back = min(days_back, 90)  # Limit to 90 days
+        
+        gmail_service = GmailService(request.user)
+        banking_messages = gmail_service.get_banking_messages(max_results, days_back)
+        
+        # Add some basic analysis
+        analysis = {
+            'total_messages': len(banking_messages),
+            'date_range': {
+                'start': (datetime.now() - timedelta(days=days_back)).isoformat(),
+                'end': datetime.now().isoformat()
+            },
+            'senders': {},
+            'keywords_found': set()
+        }
+        
+        # Analyze senders and keywords
+        for msg in banking_messages:
+            sender = msg.get('sender', 'unknown')
+            if sender in analysis['senders']:
+                analysis['senders'][sender] += 1
+            else:
+                analysis['senders'][sender] = 1
+        
+        # Convert set to list for JSON serialization
+        analysis['keywords_found'] = list(analysis['keywords_found'])
+        
+        return Response({
+            'success': True,
+            'analysis': analysis,
+            'messages': banking_messages,
+            'filters': {
+                'max_results': max_results,
+                'days_back': days_back
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Gmail banking messages error for user {request.user.username}: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to get banking messages',
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def gmail_process_banking_messages(request):
+    """Process banking messages and extract transaction data"""
+    try:
+        from core.gmail_service import GmailService
+        
+        # Get parameters
+        days_back = int(request.data.get('days_back', 30))
+        process_all = request.data.get('process_all', False)
+        
+        days_back = min(days_back, 90)  # Limit to 90 days
+        
+        gmail_service = GmailService(request.user)
+        banking_messages = gmail_service.get_banking_messages(100, days_back)
+        
+        # Basic processing results
+        processing_results = {
+            'total_messages_found': len(banking_messages),
+            'processed_messages': 0,
+            'potential_transactions': [],
+            'errors': []
+        }
+        
+        # Simple transaction detection (placeholder for AI processing)
+        for msg in banking_messages:
+            try:
+                # Look for transaction patterns in the message
+                transaction_data = _extract_basic_transaction_data(msg)
+                
+                if transaction_data:
+                    processing_results['potential_transactions'].append({
+                        'message_id': msg['id'],
+                        'sender': msg['sender'],
+                        'subject': msg['subject'],
+                        'timestamp': msg['timestamp'].isoformat(),
+                        'transaction_data': transaction_data
+                    })
+                
+                processing_results['processed_messages'] += 1
+                
+            except Exception as e:
+                processing_results['errors'].append({
+                    'message_id': msg['id'],
+                    'error': str(e)
+                })
+        
+        return Response({
+            'success': True,
+            'message': f'Processed {processing_results["processed_messages"]} banking messages',
+            'results': processing_results
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Gmail process banking messages error for user {request.user.username}: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Failed to process banking messages',
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+def _extract_basic_transaction_data(message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Basic transaction data extraction (placeholder for AI processing)"""
+    try:
+        text_content = (message.get('subject', '') + ' ' + message.get('body', '')).lower()
+        
+        # Simple regex patterns for common transaction data
+        import re
+        
+        # Amount patterns (₡, $, colones, dollars)
+        amount_patterns = [
+            r'₡\s*(\d{1,3}(?:[,.]?\d{3})*(?:[,.]?\d{2})?)',  # Costa Rican colones
+            r'\$\s*(\d{1,3}(?:[,.]?\d{3})*(?:[,.]?\d{2})?)',  # US dollars
+            r'(\d{1,3}(?:[,.]?\d{3})*(?:[,.]?\d{2})?)\s*colones',  # Colones word
+            r'(\d{1,3}(?:[,.]?\d{3})*(?:[,.]?\d{2})?)\s*dólares',  # Dollars word
+        ]
+        
+        # Transaction type patterns
+        transaction_types = {
+            'purchase': ['compra', 'purchase', 'pago', 'payment'],
+            'withdrawal': ['retiro', 'withdrawal', 'cajero', 'atm'],
+            'transfer': ['transferencia', 'transfer', 'envío', 'envio'],
+            'deposit': ['depósito', 'deposito', 'deposit', 'abono']
+        }
+        
+        extracted_data = {}
+        
+        # Try to extract amount
+        for pattern in amount_patterns:
+            match = re.search(pattern, text_content)
+            if match:
+                extracted_data['amount'] = match.group(1).replace(',', '')
+                break
+        
+        # Try to determine transaction type
+        for trans_type, keywords in transaction_types.items():
+            for keyword in keywords:
+                if keyword in text_content:
+                    extracted_data['transaction_type'] = trans_type
+                    break
+            if 'transaction_type' in extracted_data:
+                break
+        
+        # Extract merchant/location (basic pattern)
+        merchant_patterns = [
+            r'establecimiento:?\s*([a-zA-Z0-9\s]+)',
+            r'comercio:?\s*([a-zA-Z0-9\s]+)',
+            r'merchant:?\s*([a-zA-Z0-9\s]+)',
+        ]
+        
+        for pattern in merchant_patterns:
+            match = re.search(pattern, text_content, re.IGNORECASE)
+            if match:
+                extracted_data['merchant'] = match.group(1).strip()
+                break
+        
+        # Only return if we found meaningful data
+        if len(extracted_data) >= 2:  # At least amount and type, or similar
+            extracted_data['confidence'] = 'low'  # Mark as basic extraction
+            extracted_data['extraction_method'] = 'regex'
+            return extracted_data
+        
+        return None
+        
+    except Exception as e:
+        logger.warning(f"Error extracting transaction data: {str(e)}")
+        return None
