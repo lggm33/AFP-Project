@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 // Pages
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
+import AuthCallbackPage from './pages/AuthCallbackPage'
 import Dashboard from './pages/Dashboard'
 import TransactionsPage from './pages/TransactionsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
@@ -23,6 +24,7 @@ function App() {
         <Route path="/" element={<PublicLayout />}>
           <Route index element={<LandingPage />} />
           <Route path="login" element={<LoginPage />} />
+          <Route path="auth/callback" element={<AuthCallbackPage />} />
         </Route>
 
         {/* Protected Routes */}

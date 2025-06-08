@@ -2,10 +2,22 @@ import { Link } from 'react-router-dom'
 
 const LoginPage = () => {
   const handleProviderLogin = (provider: string) => {
-    // TODO: Implement multi-provider authentication
-    console.log(`Login with ${provider}`)
-    // This will redirect to Django allauth endpoints when implemented
-    // window.location.href = `/api/auth/${provider}/login/`
+    // Redirect to Django allauth OAuth endpoints
+    const backendUrl = 'http://127.0.0.1:8000'
+    
+    switch (provider) {
+      case 'google':
+        window.location.href = `${backendUrl}/accounts/google/login/`
+        break
+      case 'microsoft':
+        window.location.href = `${backendUrl}/accounts/microsoft/login/`
+        break
+      case 'yahoo':
+        console.log('Yahoo OAuth coming soon')
+        break
+      default:
+        console.log(`Provider ${provider} not implemented yet`)
+    }
   }
 
   return (

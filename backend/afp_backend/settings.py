@@ -179,11 +179,23 @@ REST_FRAMEWORK = {
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Next.js development server
+    "http://localhost:3000",  # React development server
     "http://127.0.0.1:3000",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False  # Keep security
+CORS_ALLOWED_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # Email configuration (for future use)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Development
@@ -236,16 +248,22 @@ AUTHENTICATION_BACKENDS = [
 ACCOUNT_EMAIL_VERIFICATION = 'none'  # Disable for development
 ACCOUNT_LOGIN_ON_GET = True
 
+# Custom adapters for handling OAuth flow
+ACCOUNT_ADAPTER = 'users.adapters.CustomAccountAdapter'
+SOCIALACCOUNT_ADAPTER = 'users.adapters.CustomSocialAccountAdapter'
+
 # New django-allauth configuration format
 ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 
 # Social account settings
 SOCIALACCOUNT_LOGIN_ON_GET = True
-SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_AUTO_SIGNUP = False  # Don't auto-signup, connect to existing users
 SOCIALACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_UNIQUE_EMAIL = True
 
-# Multi-provider configuration
+# Multi-provider configuration (using database SocialApp objects)
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': [
@@ -258,11 +276,7 @@ SOCIALACCOUNT_PROVIDERS = {
             'prompt': 'consent',
         },
         'OAUTH_PKCE_ENABLED': True,
-        'APP': {
-            'client_id': config('GOOGLE_CLIENT_ID', default=''),
-            'secret': config('GOOGLE_CLIENT_SECRET', default=''),
-            'key': ''
-        }
+        # APP credentials are handled by SocialApp objects in the database
     },
     'microsoft': {
         'SCOPE': [
@@ -275,11 +289,7 @@ SOCIALACCOUNT_PROVIDERS = {
         'AUTH_PARAMS': {
             'prompt': 'consent',
         },
-        'APP': {
-            'client_id': config('MICROSOFT_CLIENT_ID', default=''),
-            'secret': config('MICROSOFT_CLIENT_SECRET', default=''),
-            'key': ''
-        }
+        # APP credentials are handled by SocialApp objects in the database
     },
     # Yahoo coming soon
     # 'yahoo': {
@@ -288,11 +298,7 @@ SOCIALACCOUNT_PROVIDERS = {
     #         'profile',
     #         'email',
     #     ],
-    #     'APP': {
-    #         'client_id': config('YAHOO_CLIENT_ID', default=''),
-    #         'secret': config('YAHOO_CLIENT_SECRET', default=''),
-    #         'key': ''
-    #     }
+    #     # APP credentials are handled by SocialApp objects in the database
     # },
 }
 
@@ -302,8 +308,15 @@ REST_AUTH = {
     'JWT_AUTH_COOKIE': 'afp-auth',
     'JWT_AUTH_REFRESH_COOKIE': 'afp-refresh-token',
     'JWT_AUTH_HTTPONLY': False,  # Allow frontend access to tokens
+    'JWT_AUTH_SAMESITE': 'Lax',  # Allow cross-origin cookies
     'REGISTER_SERIALIZER': 'users.serializers.CustomRegisterSerializer',
 }
+
+# Session settings for cross-origin
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
 
 # JWT settings (you'll need to install djangorestframework-simplejwt)
 from datetime import timedelta
@@ -316,7 +329,7 @@ SIMPLE_JWT = {
 }
 
 # Redirect URLs after social auth
-LOGIN_REDIRECT_URL = config('LOGIN_REDIRECT_URL', default='http://localhost:3000/app/dashboard')
+LOGIN_REDIRECT_URL = config('LOGIN_REDIRECT_URL', default='http://127.0.0.1:8000/auth/success/')
 LOGOUT_REDIRECT_URL = config('LOGOUT_REDIRECT_URL', default='http://localhost:3000/')
 
 # OAuth credentials from environment variables

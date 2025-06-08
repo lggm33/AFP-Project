@@ -20,7 +20,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken.views import obtain_auth_token
 
 # Import ViewSets
-from users.views import UserViewSet, UserProfileViewSet, SubscriptionViewSet
+from users.views import UserViewSet, UserProfileViewSet, SubscriptionViewSet, check_auth_status, oauth_callback_exchange, user_me, debug_oauth_session, oauth_success_redirect
 from banking.views import BankViewSet, EmailPatternViewSet
 from transactions.views import CategoryViewSet, TransactionViewSet, EmailQueueViewSet
 
@@ -41,6 +41,9 @@ urlpatterns = [
     # Django Admin
     path('admin/', admin.site.urls),
     
+    # Django Allauth URLs (direct access)
+    path('accounts/', include('allauth.urls')),
+    
     # Multi-Provider Authentication (django-allauth)
     path('api/auth/', include('dj_rest_auth.urls')),
     path('api/auth/registration/', include('dj_rest_auth.registration.urls')),
@@ -48,6 +51,21 @@ urlpatterns = [
     
     # Legacy token auth (keeping for backward compatibility)
     path('api/auth/token/', obtain_auth_token, name='api_token_auth'),
+    
+    # Custom auth check endpoint (works with sessions)
+    path('api/auth/check/', check_auth_status, name='check_auth_status'),
+    
+    # OAuth callback token exchange (Session → JWT)
+    path('api/auth/oauth/exchange/', oauth_callback_exchange, name='oauth_callback_exchange'),
+    
+    # Current user endpoint (JWT protected)
+    path('api/users/me/', user_me, name='user_me'),
+    
+    # Debug OAuth session endpoint
+    path('api/debug/oauth/', debug_oauth_session, name='debug_oauth_session'),
+    
+    # OAuth success redirect (handles LOGIN_REDIRECT_URL)
+    path('auth/success/', oauth_success_redirect, name='oauth_success_redirect'),
     
     # API Endpoints
     path('api/', include(router.urls)),
