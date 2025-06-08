@@ -1,5 +1,6 @@
 # 🚀 PLAN DE TRABAJO - AFP (Aplicación de Finanzas Personales)
 
+
 ## 📋 **REQUERIMIENTOS DEL NEGOCIO**
 
 ### **🎯 Propuesta de Valor**
