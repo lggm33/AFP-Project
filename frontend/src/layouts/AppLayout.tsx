@@ -1,7 +1,9 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 
 const AppLayout = () => {
   const location = useLocation()
+  const { user, logout, isLoading } = useAuth()
 
   const navigation = [
     { name: 'Dashboard', href: '/app/dashboard', icon: '📊' },
@@ -12,6 +14,22 @@ const AppLayout = () => {
 
   const isActive = (href: string) => {
     return location.pathname === href || (href === '/app/dashboard' && location.pathname === '/app')
+  }
+
+  const handleLogout = async () => {
+    if (window.confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+      await logout()
+    }
+  }
+
+  const getUserInitials = (username: string, email: string) => {
+    if (username) {
+      return username.substring(0, 2).toUpperCase()
+    }
+    if (email) {
+      return email.substring(0, 2).toUpperCase()
+    }
+    return 'U'
   }
 
   return (
@@ -52,13 +70,24 @@ const AppLayout = () => {
           <div className="border-t px-4 py-4">
             <div className="flex items-center gap-3 p-3 rounded-md hover:bg-gray-50">
               <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                <span className="text-primary-600 font-medium text-sm">U</span>
+                <span className="text-primary-600 font-medium text-sm">
+                  {user ? getUserInitials(user.username, user.email) : 'U'}
+                </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-700">Usuario</p>
-                <p className="text-xs text-gray-500">user@email.com</p>
+                <p className="text-sm font-medium text-gray-700">
+                  {user?.username || 'Usuario'}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {user?.email || 'email@domain.com'}
+                </p>
               </div>
-              <button className="text-gray-400 hover:text-gray-600">
+              <button 
+                onClick={handleLogout}
+                disabled={isLoading}
+                className="text-gray-400 hover:text-red-600 disabled:opacity-50 transition-colors"
+                title="Cerrar sesión"
+              >
                 <span className="sr-only">Cerrar sesión</span>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -84,7 +113,24 @@ const AppLayout = () => {
                 </button>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">2 emails conectados</span>
+                  <span className="text-sm text-gray-600">
+                    {user?.providers?.length || 0} emails conectados
+                  </span>
+                </div>
+                
+                {/* User menu in header */}
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <span>Hola, {user?.username || 'Usuario'}</span>
+                  <button 
+                    onClick={handleLogout}
+                    disabled={isLoading}
+                    className="text-gray-500 hover:text-red-600 disabled:opacity-50 transition-colors ml-2"
+                    title="Cerrar sesión"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>

@@ -17,6 +17,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.middleware.csrf import get_token
 from django.utils import timezone
 from urllib.parse import urlencode
+from allauth.socialaccount.models import SocialAccount
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 
@@ -312,3 +316,77 @@ def oauth_success_redirect(request):
         error_params = {'error': 'token_generation_failed', 'message': str(e)}
         redirect_url = f"http://localhost:3000/login?{urlencode(error_params)}"
         return redirect(redirect_url)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout_user(request):
+    """Logout user and blacklist refresh token"""
+    try:
+        # Get refresh token from request
+        refresh_token = request.data.get('refresh_token')
+        
+        if refresh_token:
+            try:
+                # Create RefreshToken instance and blacklist it
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+                logger.info(f"Successfully blacklisted refresh token for user {request.user.username}")
+            except Exception as e:
+                logger.warning(f"Failed to blacklist refresh token: {str(e)}")
+                # Continue with logout even if blacklisting fails
+        
+        return Response({
+            'message': 'Successfully logged out',
+            'detail': 'Refresh token has been blacklisted'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error in logout: {str(e)}")
+        return Response({
+            'message': 'Logged out successfully',
+            'detail': 'Token blacklisting may have failed but user is logged out'
+        }, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+def refresh_token(request):
+    """Refresh access token using refresh token"""
+    try:
+        refresh_token = request.data.get('refresh_token')
+        
+        if not refresh_token:
+            return Response({'error': 'Refresh token is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Validate and refresh the token
+            token = RefreshToken(refresh_token)
+            
+            # Check if token is blacklisted
+            if hasattr(token, 'check_blacklist'):
+                token.check_blacklist()
+            
+            # Generate new access token
+            new_access_token = str(token.access_token)
+            
+            # Optionally rotate refresh token
+            if hasattr(token, 'set_jti'):
+                token.set_jti()
+                new_refresh_token = str(token)
+            else:
+                new_refresh_token = refresh_token
+            
+            return Response({
+                'access_token': new_access_token,
+                'refresh_token': new_refresh_token,
+                'token_type': 'Bearer'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as token_error:
+            logger.warning(f"Token refresh failed: {str(token_error)}")
+            return Response({
+                'error': 'Invalid or expired refresh token',
+                'detail': str(token_error)
+            }, status=status.HTTP_401_UNAUTHORIZED)
+            
+    except Exception as e:
+        logger.error(f"Error in refresh_token: {str(e)}")
+        return Response({'error': 'Token refresh failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

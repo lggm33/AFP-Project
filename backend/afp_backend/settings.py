@@ -60,6 +60,9 @@ INSTALLED_APPS = [
     'dj_rest_auth',
     'dj_rest_auth.registration',
     
+    # JWT Token Blacklist
+    'rest_framework_simplejwt.token_blacklist',
+    
     # Local apps
     'users',
     'banking',

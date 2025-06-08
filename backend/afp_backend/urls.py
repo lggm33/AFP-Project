@@ -20,7 +20,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken.views import obtain_auth_token
 
 # Import ViewSets
-from users.views import UserViewSet, UserProfileViewSet, SubscriptionViewSet, check_auth_status, oauth_callback_exchange, user_me, debug_oauth_session, oauth_success_redirect
+from users.views import UserViewSet, UserProfileViewSet, SubscriptionViewSet, check_auth_status, oauth_callback_exchange, user_me, debug_oauth_session, oauth_success_redirect, logout_user, refresh_token
 from banking.views import BankViewSet, EmailPatternViewSet
 from transactions.views import CategoryViewSet, TransactionViewSet, EmailQueueViewSet
 
@@ -60,6 +60,10 @@ urlpatterns = [
     
     # Current user endpoint (JWT protected)
     path('api/users/me/', user_me, name='user_me'),
+    
+    # Authentication management endpoints
+    path('api/auth/logout/', logout_user, name='logout_user'),
+    path('api/auth/refresh/', refresh_token, name='refresh_token'),
     
     # Debug OAuth session endpoint
     path('api/debug/oauth/', debug_oauth_session, name='debug_oauth_session'),

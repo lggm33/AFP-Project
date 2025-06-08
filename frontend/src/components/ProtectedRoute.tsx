@@ -1,49 +1,10 @@
 import { Navigate, Outlet } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useAuth } from '../hooks/useAuth'
 
 const ProtectedRoute = () => {
-  const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading')
+  const { isAuthenticated, isLoading, error } = useAuth()
 
-  useEffect(() => {
-    const checkAuthentication = async () => {
-      try {
-        // Check if we have a valid access token
-        const accessToken = localStorage.getItem('afp_access_token')
-        const userString = localStorage.getItem('afp_user')
-        
-        if (!accessToken || !userString) {
-          setAuthState('unauthenticated')
-          return
-        }
-
-        // Verify token is still valid by making a test API call
-        const response = await fetch('http://127.0.0.1:8000/api/users/me/', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        })
-
-        if (response.ok) {
-          setAuthState('authenticated')
-        } else {
-          // Token is invalid, clear stored data
-          localStorage.removeItem('afp_access_token')
-          localStorage.removeItem('afp_user')
-          localStorage.removeItem('afp_social_accounts')
-          setAuthState('unauthenticated')
-        }
-      } catch (error) {
-        console.error('Authentication check failed:', error)
-        setAuthState('unauthenticated')
-      }
-    }
-
-    checkAuthentication()
-  }, [])
-
-  if (authState === 'loading') {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -53,6 +14,11 @@ const ProtectedRoute = () => {
               <h2 className="mt-4 text-lg font-medium text-gray-900">
                 Verificando autenticación...
               </h2>
+              {error && (
+                <p className="mt-2 text-sm text-red-600">
+                  {error}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -60,7 +26,7 @@ const ProtectedRoute = () => {
     )
   }
 
-  if (authState === 'unauthenticated') {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
 
