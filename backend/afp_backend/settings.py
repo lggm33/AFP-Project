@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',  # Required for allauth
     
     # Django REST Framework
     'rest_framework',
@@ -46,6 +47,18 @@ INSTALLED_APPS = [
     
     # CORS headers
     'corsheaders',
+    
+    # Django Allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.microsoft',
+    # 'allauth.socialaccount.providers.yahoo',  # Coming soon
+    
+    # REST Auth
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
     
     # Local apps
     'users',
@@ -61,6 +74,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'allauth.account.middleware.AccountMiddleware',  # Required for allauth
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -154,6 +168,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
+        'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -204,3 +219,110 @@ LOGGING = {
         },
     },
 }
+
+# =====================================================
+# DJANGO ALLAUTH CONFIGURATION (MULTI-PROVIDER)
+# =====================================================
+
+SITE_ID = 1
+
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# Allauth settings (updated to new format)
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # Disable for development
+ACCOUNT_LOGIN_ON_GET = True
+
+# New django-allauth configuration format
+ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
+
+# Social account settings
+SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_REQUIRED = True
+
+# Multi-provider configuration
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+            'https://www.googleapis.com/auth/gmail.readonly',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'offline',
+            'prompt': 'consent',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+        'APP': {
+            'client_id': config('GOOGLE_CLIENT_ID', default=''),
+            'secret': config('GOOGLE_CLIENT_SECRET', default=''),
+            'key': ''
+        }
+    },
+    'microsoft': {
+        'SCOPE': [
+            'openid',
+            'email',
+            'profile',
+            'https://graph.microsoft.com/user.read',
+            'https://graph.microsoft.com/mail.read',
+        ],
+        'AUTH_PARAMS': {
+            'prompt': 'consent',
+        },
+        'APP': {
+            'client_id': config('MICROSOFT_CLIENT_ID', default=''),
+            'secret': config('MICROSOFT_CLIENT_SECRET', default=''),
+            'key': ''
+        }
+    },
+    # Yahoo coming soon
+    # 'yahoo': {
+    #     'SCOPE': [
+    #         'openid',
+    #         'profile',
+    #         'email',
+    #     ],
+    #     'APP': {
+    #         'client_id': config('YAHOO_CLIENT_ID', default=''),
+    #         'secret': config('YAHOO_CLIENT_SECRET', default=''),
+    #         'key': ''
+    #     }
+    # },
+}
+
+# REST Auth settings
+REST_AUTH = {
+    'USE_JWT': True,
+    'JWT_AUTH_COOKIE': 'afp-auth',
+    'JWT_AUTH_REFRESH_COOKIE': 'afp-refresh-token',
+    'JWT_AUTH_HTTPONLY': False,  # Allow frontend access to tokens
+    'REGISTER_SERIALIZER': 'users.serializers.CustomRegisterSerializer',
+}
+
+# JWT settings (you'll need to install djangorestframework-simplejwt)
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
+
+# Redirect URLs after social auth
+LOGIN_REDIRECT_URL = config('LOGIN_REDIRECT_URL', default='http://localhost:3000/app/dashboard')
+LOGOUT_REDIRECT_URL = config('LOGOUT_REDIRECT_URL', default='http://localhost:3000/')
+
+# OAuth credentials from environment variables
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
+GOOGLE_CLIENT_SECRET = config('GOOGLE_CLIENT_SECRET', default='')
+MICROSOFT_CLIENT_ID = config('MICROSOFT_CLIENT_ID', default='')
+MICROSOFT_CLIENT_SECRET = config('MICROSOFT_CLIENT_SECRET', default='')
+# YAHOO_CLIENT_ID = config('YAHOO_CLIENT_ID', default='')
+# YAHOO_CLIENT_SECRET = config('YAHOO_CLIENT_SECRET', default='')

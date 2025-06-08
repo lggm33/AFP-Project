@@ -41,7 +41,12 @@ urlpatterns = [
     # Django Admin
     path('admin/', admin.site.urls),
     
-    # API Authentication
+    # Multi-Provider Authentication (django-allauth)
+    path('api/auth/', include('dj_rest_auth.urls')),
+    path('api/auth/registration/', include('dj_rest_auth.registration.urls')),
+    path('api/auth/social/', include('allauth.socialaccount.urls')),
+    
+    # Legacy token auth (keeping for backward compatibility)
     path('api/auth/token/', obtain_auth_token, name='api_token_auth'),
     
     # API Endpoints
