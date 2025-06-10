@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Transaction, EmailQueue
+from .models import Category, Transaction
 from banking.serializers import BankListSerializer, EmailPatternSerializer
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -80,28 +80,4 @@ class TransactionListSerializer(serializers.ModelSerializer):
             'bank_name', 'category_name', 'category_color', 'confidence_score'
         ]
 
-class EmailQueueSerializer(serializers.ModelSerializer):
-    """Serializer for EmailQueue model"""
-    bank = BankListSerializer(read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
-    
-    class Meta:
-        model = EmailQueue
-        fields = [
-            'id', 'bank', 'gmail_message_id', 'sender', 'subject',
-            'received_at', 'status', 'status_display', 'worker_id',
-            'attempts', 'error_message', 'created_at', 'processed_at'
-        ]
-        read_only_fields = [
-            'id', 'gmail_message_id', 'worker_id', 'attempts',
-            'error_message', 'created_at', 'processed_at'
-        ]
-
-class EmailQueueCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating EmailQueue entries"""
-    class Meta:
-        model = EmailQueue
-        fields = [
-            'bank', 'gmail_message_id', 'sender', 'subject',
-            'body', 'received_at'
-        ] 
+# EmailQueue serializers moved to banking.serializers 

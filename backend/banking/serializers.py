@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Bank, EmailPattern
+from .models import Bank, EmailPattern, EmailQueue, EmailProcessingLog, BankTemplate
 
 class EmailPatternSerializer(serializers.ModelSerializer):
     """Serializer for EmailPattern model"""
@@ -87,4 +87,84 @@ class BankListSerializer(serializers.ModelSerializer):
     
     def get_pattern_count(self, obj):
         """Get total number of email patterns"""
-        return obj.emailpattern_set.filter(is_active=True).count() 
+        return obj.emailpattern_set.filter(is_active=True).count()
+
+
+# =====================================================
+# EMAIL PROCESSING QUEUE SERIALIZERS (FOR CELERY)
+# =====================================================
+
+class EmailQueueSerializer(serializers.ModelSerializer):
+    """Serializer for EmailQueue model"""
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    queue_type_display = serializers.CharField(source='get_queue_type_display', read_only=True)
+    bank_name = serializers.CharField(source='bank.name', read_only=True)
+    
+    class Meta:
+        model = EmailQueue
+        fields = [
+            'id', 'gmail_message_id', 'sender', 'subject', 'received_at',
+            'status', 'status_display', 'queue_type', 'queue_type_display',
+            'priority', 'worker_id', 'attempts', 'error_message', 'confidence_score',
+            'bank_name', 'created_at', 'processed_at', 'last_attempt_at'
+        ]
+        read_only_fields = [
+            'id', 'gmail_message_id', 'worker_id', 'attempts', 'confidence_score',
+            'created_at', 'processed_at', 'last_attempt_at'
+        ]
+
+class EmailQueueCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating EmailQueue entries"""
+    class Meta:
+        model = EmailQueue
+        fields = [
+            'gmail_message_id', 'sender', 'subject', 'body', 'received_at',
+            'queue_type', 'priority'
+        ]
+
+class EmailProcessingLogSerializer(serializers.ModelSerializer):
+    """Serializer for EmailProcessingLog model"""
+    email_message_id = serializers.CharField(source='email_queue.gmail_message_id', read_only=True)
+    
+    class Meta:
+        model = EmailProcessingLog
+        fields = [
+            'id', 'email_message_id', 'worker_type', 'worker_id', 
+            'started_at', 'completed_at', 'success', 'error_message',
+            'extracted_data', 'processing_time_seconds', 'api_calls_made'
+        ]
+        read_only_fields = ['id', 'started_at', 'completed_at']
+
+class BankTemplateSerializer(serializers.ModelSerializer):
+    """Serializer for BankTemplate model"""
+    bank_name = serializers.CharField(source='bank.name', read_only=True)
+    success_rate = serializers.ReadOnlyField()
+    pattern_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = BankTemplate
+        fields = [
+            'id', 'bank_name', 'name', 'version', 'is_active',
+            'subject_patterns', 'sender_patterns', 'body_keywords',
+            'success_count', 'failure_count', 'success_rate', 'confidence_threshold',
+            'generated_by_ai', 'ai_prompt_used', 'sample_emails_used',
+            'pattern_count', 'created_at', 'updated_at', 'last_used_at'
+        ]
+        read_only_fields = [
+            'id', 'success_count', 'failure_count', 'success_rate',
+            'created_at', 'updated_at', 'last_used_at'
+        ]
+    
+    def get_pattern_count(self, obj):
+        """Get number of email patterns associated with this template"""
+        return obj.email_patterns.count()
+
+class BankTemplateCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating BankTemplate"""
+    class Meta:
+        model = BankTemplate
+        fields = [
+            'name', 'version', 'is_active', 'subject_patterns', 
+            'sender_patterns', 'body_keywords', 'confidence_threshold',
+            'generated_by_ai', 'ai_prompt_used', 'sample_emails_used'
+        ] 

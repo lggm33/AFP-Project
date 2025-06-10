@@ -63,6 +63,10 @@ INSTALLED_APPS = [
     # JWT Token Blacklist
     'rest_framework_simplejwt.token_blacklist',
     
+    # Celery apps
+    'django_celery_beat',
+    'django_celery_results',
+    
     # Local apps
     'users',
     'banking',
@@ -208,9 +212,77 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 
-# Celery configuration (for future use)
-CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
+# =====================================================
+# REDIS & CELERY CONFIGURATION (EMAIL PROCESSING)
+# =====================================================
+
+# Redis URL configuration - unified for all Redis uses
+REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
+
+# Celery Broker settings
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
+# Task routing for different types of workers
+CELERY_TASK_ROUTES = {
+    'workers.email_processing.import_emails_task': {'queue': 'email_import'},
+    'workers.email_processing.process_email_task': {'queue': 'email_processing'},
+    'workers.email_processing.create_transaction_task': {'queue': 'transaction_creation'},
+    'workers.ai_generation.generate_patterns_task': {'queue': 'ai_processing'},
+}
+
+# Worker configuration
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
+
+# Task retry configuration
+CELERY_TASK_RETRY_DELAY = 60  # seconds
+CELERY_TASK_MAX_RETRIES = 3
+
+# Scheduled tasks (Celery Beat)
+CELERY_BEAT_SCHEDULE = {
+    'import-emails-every-5-minutes': {
+        'task': 'workers.email_processing.import_emails_task',
+        'schedule': 300.0,  # 5 minutes
+        'options': {'queue': 'email_import'}
+    },
+    'process-queued-emails-every-minute': {
+        'task': 'workers.email_processing.process_queued_emails_task',
+        'schedule': 60.0,  # 1 minute
+        'options': {'queue': 'email_processing'}
+    },
+}
+
+# =====================================================
+# REDIS CACHE CONFIGURATION
+# =====================================================
+
+# Django cache configuration using Redis
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': REDIS_URL,
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 50,
+                'retry_on_timeout': True,
+            },
+        },
+        'KEY_PREFIX': 'afp',
+        'TIMEOUT': 3600,  # 1 hour default
+    }
+}
+
+# Session backend using Redis cache
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
+SESSION_COOKIE_AGE = 86400  # 24 hours
 
 # OpenAI API configuration (for future use)
 OPENAI_API_KEY = config('OPENAI_API_KEY', default='')

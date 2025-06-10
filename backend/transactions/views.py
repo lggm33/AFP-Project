@@ -6,13 +6,14 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from datetime import timedelta
-from .models import Category, Transaction, EmailQueue
+from .models import Category, Transaction
+from banking.models import EmailQueue
 from .serializers import (
     CategorySerializer, CategoryCreateSerializer,
     TransactionSerializer, TransactionCreateSerializer, 
     TransactionUpdateSerializer, TransactionListSerializer,
-    EmailQueueSerializer, EmailQueueCreateSerializer
 )
+from banking.serializers import EmailQueueSerializer, EmailQueueCreateSerializer
 
 class CategoryViewSet(viewsets.ModelViewSet):
     """

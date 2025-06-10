@@ -54,3 +54,13 @@ typing-inspection==0.4.1
 typing_extensions==4.14.0
 uritemplate==4.2.0
 urllib3==2.4.0
+
+# Celery & Background Processing
+celery==5.4.0
+redis==5.2.1
+django-celery-beat==2.8.0
+django-celery-results==2.5.1
+
+# Redis Cache & Performance
+django-redis==5.4.0
+hiredis==3.1.0
