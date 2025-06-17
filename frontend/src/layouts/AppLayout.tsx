@@ -9,6 +9,7 @@ const AppLayout = () => {
     { name: 'Dashboard', href: '/app/dashboard', icon: '📊' },
     { name: 'Transacciones', href: '/app/transactions', icon: '💳' },
     { name: 'Análisis', href: '/app/analytics', icon: '📈' },
+    { name: 'Integraciones', href: '/app/integrations', icon: '🔗' },
     { name: 'Gmail Test', href: '/app/gmail-test', icon: '📧' },
     { name: 'Configuración', href: '/app/settings', icon: '⚙️' },
   ]

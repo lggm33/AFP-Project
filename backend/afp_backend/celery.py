@@ -9,6 +9,7 @@ error handling for production use.
 import os
 from celery import Celery
 from django.conf import settings
+from celery.schedules import crontab
 
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'afp_backend.settings')
@@ -79,8 +80,6 @@ app.conf.result_expires = 3600  # 1 hour
 # SCHEDULED TASKS (CELERY BEAT)
 # ==========================================
 
-from celery.schedules import crontab
-
 app.conf.beat_schedule = {
     # Import new emails every hour during business hours (8 AM - 8 PM)
     'import-emails-hourly': {
@@ -115,6 +114,20 @@ app.conf.beat_schedule = {
         'task': 'workers.system.retry_failed_task',
         'schedule': crontab(minute=15),  # Every hour at minute 15
         'options': {'queue': 'retry_queue'}
+    },
+    
+    # Refresh provider tokens every 12 hours
+    'refresh-provider-tokens': {
+        'task': 'core.tasks.refresh_provider_tokens',
+        'schedule': crontab(hour='*/12'),  # Cada 12 horas
+        'args': (False,),  # No forzar refresh
+    },
+    
+    # Force refresh provider tokens once a day at midnight
+    'force-refresh-provider-tokens': {
+        'task': 'core.tasks.refresh_provider_tokens',
+        'schedule': crontab(hour=0, minute=0),  # Una vez al día a medianoche
+        'args': (True,),  # Forzar refresh
     },
 }
 

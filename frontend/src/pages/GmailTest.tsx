@@ -18,6 +18,23 @@ interface GmailMessage {
   body?: string
 }
 
+interface Integration {
+  id: number
+  provider: string
+  email_address: string
+  is_active: boolean
+}
+
+interface BankingAnalysis {
+  total_messages: number
+  date_range: {
+    start: string
+    end: string
+  }
+  senders: Record<string, number>
+  integrations: Array<{ id: number; email_address: string }>
+}
+
 interface ProcessingResults {
   total_messages_found: number
   processed_messages: number
@@ -26,7 +43,7 @@ interface ProcessingResults {
     sender: string
     subject: string
     timestamp: string
-    transaction_data: any
+    transaction_data: Record<string, unknown>
   }>
   errors: Array<{ message_id: string; error: string }>
 }
@@ -48,7 +65,7 @@ const GmailTestPage = () => {
   const [bankingMessages, setBankingMessages] = useState<GmailMessage[]>([])
   const [bankingLoading, setBankingLoading] = useState(false)
   const [bankingFilters, setBankingFilters] = useState({ max_results: 50, days_back: 30 })
-  const [bankingAnalysis, setBankingAnalysis] = useState<any>(null)
+  const [bankingAnalysis, setBankingAnalysis] = useState<BankingAnalysis | null>(null)
   
   // Processing State
   const [processingResults, setProcessingResults] = useState<ProcessingResults | null>(null)
@@ -58,11 +75,31 @@ const GmailTestPage = () => {
   const testConnection = async () => {
     setConnectionLoading(true)
     try {
-      const response = await makeAuthenticatedRequest('/api/gmail/test/')
+      // Get user integrations first to test connection
+      const integrationsResponse = await makeAuthenticatedRequest('/api/core/integrations/')
+      const integrationsData = await integrationsResponse.json()
+      
+      if (!integrationsData.results || !integrationsData.results.length) {
+        setConnectionData({ success: false, error: 'No Gmail integrations found. Please connect your Gmail account first.' })
+        setConnectionLoading(false)
+        return
+      }
+      
+      // Test connection for the first Gmail integration
+      const gmailIntegration = integrationsData.results.find((integration: Integration) => integration.provider === 'gmail')
+      if (!gmailIntegration) {
+        setConnectionData({ success: false, error: 'No Gmail integration found. Please connect your Gmail account first.' })
+        setConnectionLoading(false)
+        return
+      }
+      
+      const response = await makeAuthenticatedRequest(`/api/core/integrations/${gmailIntegration.id}/test_connection/`, {
+        method: 'POST'
+      })
       const data = await response.json()
       setConnectionData(data.data || data)
     } catch (error) {
-      setConnectionData({ success: false, error: 'Connection failed' })
+      setConnectionData({ success: false, error: `Connection failed: ${error}` })
     }
     setConnectionLoading(false)
   }
@@ -75,7 +112,7 @@ const GmailTestPage = () => {
         days_back: messageFilters.days_back.toString()
       })
       
-      const response = await makeAuthenticatedRequest(`/api/gmail/messages/?${params}`)
+      const response = await makeAuthenticatedRequest(`/api/core/gmail/messages/recent/?${params}`)
       const data = await response.json()
       
       if (data.success) {
@@ -95,7 +132,7 @@ const GmailTestPage = () => {
         days_back: bankingFilters.days_back.toString()
       })
       
-      const response = await makeAuthenticatedRequest(`/api/gmail/banking/?${params}`)
+      const response = await makeAuthenticatedRequest(`/api/core/gmail/messages/banking/?${params}`)
       const data = await response.json()
       
       if (data.success) {
@@ -111,7 +148,7 @@ const GmailTestPage = () => {
   const processMessages = async () => {
     setProcessingLoading(true)
     try {
-      const response = await makeAuthenticatedRequest('/api/gmail/process/', {
+      const response = await makeAuthenticatedRequest('/api/core/gmail/import/', {
         method: 'POST',
         body: JSON.stringify({
           days_back: processingFilters.days_back,

@@ -21,8 +21,12 @@ from allauth.socialaccount.models import SocialAccount
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Any
+from .auth_managers import AppAuthManager
 
 logger = logging.getLogger(__name__)
+
+# Crear instancia global del manager
+app_auth_manager = AppAuthManager()
 
 # Create your views here.
 
@@ -328,26 +332,19 @@ def logout_user(request):
         refresh_token = request.data.get('refresh_token')
         
         if refresh_token:
-            try:
-                # Create RefreshToken instance and blacklist it
-                token = RefreshToken(refresh_token)
-                token.blacklist()
-                logger.info(f"Successfully blacklisted refresh token for user {request.user.username}")
-            except Exception as e:
-                logger.warning(f"Failed to blacklist refresh token: {str(e)}")
-                # Continue with logout even if blacklisting fails
+            # Usar el nuevo manager para revocar
+            app_auth_manager.revoke_app_tokens(refresh_token)
+            logger.info(f"Successfully blacklisted refresh token for user {request.user.username}")
         
         return Response({
-            'message': 'Successfully logged out',
             'detail': 'Refresh token has been blacklisted'
-        }, status=status.HTTP_200_OK)
+        })
         
     except Exception as e:
-        logger.error(f"Error in logout: {str(e)}")
+        logger.warning(f"Failed to blacklist refresh token: {str(e)}")
         return Response({
-            'message': 'Logged out successfully',
-            'detail': 'Token blacklisting may have failed but user is logged out'
-        }, status=status.HTTP_200_OK)
+            'detail': 'Logout completed but token blacklist failed'
+        })
 
 @api_view(['POST'])
 def refresh_token(request):
@@ -358,40 +355,26 @@ def refresh_token(request):
         if not refresh_token:
             return Response({'error': 'Refresh token is required'}, status=status.HTTP_400_BAD_REQUEST)
         
-        try:
-            # Validate and refresh the token
-            token = RefreshToken(refresh_token)
-            
-            # Check if token is blacklisted
-            if hasattr(token, 'check_blacklist'):
-                token.check_blacklist()
-            
-            # Generate new access token
-            new_access_token = str(token.access_token)
-            
-            # Optionally rotate refresh token
-            if hasattr(token, 'set_jti'):
-                token.set_jti()
-                new_refresh_token = str(token)
-            else:
-                new_refresh_token = refresh_token
-            
-            return Response({
-                'access_token': new_access_token,
-                'refresh_token': new_refresh_token,
-                'token_type': 'Bearer'
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as token_error:
-            logger.warning(f"Token refresh failed: {str(token_error)}")
+        # Usar el nuevo manager para refresh
+        new_tokens = app_auth_manager.refresh_app_tokens(refresh_token)
+        
+        if not new_tokens:
             return Response({
                 'error': 'Invalid or expired refresh token',
-                'detail': str(token_error)
+                'message': 'Please login again'
             }, status=status.HTTP_401_UNAUTHORIZED)
             
+        return Response({
+            'access_token': new_tokens['access_token'],
+            'refresh_token': new_tokens['refresh_token']
+        })
+        
     except Exception as e:
         logger.error(f"Error in refresh_token: {str(e)}")
-        return Response({'error': 'Token refresh failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({
+            'error': 'Token refresh failed',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

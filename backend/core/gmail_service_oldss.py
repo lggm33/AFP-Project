@@ -310,6 +310,59 @@ class GmailService:
         # If we find multiple banking keywords, it's likely a banking message
         return keyword_count >= 2
     
+    def get_all_emails(self, max_results: int = 200, days_back: int = 60) -> List[Dict[str, Any]]:
+        """Get all emails without filtering - for manual analysis"""
+        if not self.service:
+            logger.error("Gmail service not initialized")
+            return []
+        
+        try:
+            # Calculate date filter (last N days)
+            since_date = datetime.now() - timedelta(days=days_back)
+            query = f'after:{since_date.strftime("%Y/%m/%d")}'
+            
+            # Get message list
+            results = self.service.users().messages().list(
+                userId='me',
+                q=query,
+                maxResults=max_results
+            ).execute()
+            
+            messages = results.get('messages', [])
+            
+            if not messages:
+                logger.info(f"No messages found for user {self.user.username}")
+                return []
+            
+            # Get detailed message info
+            detailed_messages = []
+            for message in messages[:max_results]:  # Limit results
+                try:
+                    msg_detail = self.service.users().messages().get(
+                        userId='me',
+                        id=message['id'],
+                        format='full'
+                    ).execute()
+                    
+                    # Parse message
+                    parsed_msg = self._parse_message(msg_detail)
+                    if parsed_msg:
+                        detailed_messages.append(parsed_msg)
+                        
+                except Exception as e:
+                    logger.warning(f"Failed to get message {message['id']}: {str(e)}")
+                    continue
+            
+            logger.info(f"Retrieved {len(detailed_messages)} total messages for user {self.user.username}")
+            return detailed_messages
+            
+        except HttpError as e:
+            logger.error(f"Gmail API error getting all messages for user {self.user.username}: {str(e)}")
+            return []
+        except Exception as e:
+            logger.error(f"Unexpected error getting all messages for user {self.user.username}: {str(e)}")
+            return []
+
     def refresh_token_if_needed(self) -> bool:
         """Refresh OAuth token if needed"""
         # This will be handled by django-allauth token refresh

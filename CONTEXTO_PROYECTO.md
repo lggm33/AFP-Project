@@ -171,15 +171,54 @@ afp-project/frontend/
 - **Redis + Celery Infrastructure**: Completamente configurado y testado
 - **Database Schema**: 6 modelos optimizados para email processing y feedback
 - **Performance Verified**: Redis @ 7 ops/second, todas las conexiones funcionando
+- **✅ NEW CORE ARCHITECTURE**: Refactorización completa de email system
+- **✅ Gmail API Integration**: OAuth tokens migrados, 25,483 emails disponibles
+- **✅ Integrations Management**: Nueva interfaz completa para gestión de integraciones
+- **✅ Bank Senders System**: Sistema completo de gestión de remitentes bancarios implementado
+- **✅ PAGINATION SYSTEM**: Sistema completo de paginación para emails implementado
 
-#### **🔄 EN PROGRESO (15%):**  
-- **Celery Workers Structure**: Preparando EmailImportWorker y BasicProcessingWorker
-- **Queue Specialization**: Configurando colas específicas por tipo de procesamiento
+#### **🔄 ARQUITECTURA REFACTORIZADA (95% COMPLETADO):**  
+- **✅ Core App**: Nueva app `core/` centraliza toda funcionalidad de emails
+- **✅ Provider Pattern**: BaseEmailProvider + GmailProvider implementados
+- **✅ Integration Model**: Gestión de cuentas email con OAuth tokens
+- **✅ EmailImportJob Model**: Sistema de jobs para Celery workers
+- **✅ Email Model**: Almacenamiento de emails raw separado de lógica de queue
+- **✅ Token Migration**: OAuth tokens migrados de SocialAccount a Integration
+- **✅ New Endpoints**: `/api/core/` endpoints funcionando correctamente
+- **✅ Frontend Integration**: Nueva página Integrations con gestión completa
+- **✅ BankSender Models**: Modelos BankSender y UserBankSender con relaciones N:N
+- **✅ Bank Sender ViewSets**: CRUD completo + endpoints especializados (search, popular, add_by_email)
+- **✅ Frontend Bank Senders**: Tab de gestión de remitentes bancarios integrado
+- **✅ PAGINATION SYSTEM COMPLETO**:
+  - **Backend**: get_all_messages() y get_banking_messages() con paginación completa
+  - **API Strategy**: Obtiene TODOS los message IDs primero (lightweight), luego pagina detalles
+  - **Frontend**: Controles de paginación completos con navegación por páginas
+  - **Performance**: Optimizado para manejar miles de emails sin límites artificiales
+  - **UX**: "Emails por Página" en lugar de "Máximo Resultados", navegación intuitiva
+- **✅ UNIFIED ENDPOINTS RESTRUCTURE**:
+  - **Eliminados**: `gmail_all_messages`, `gmail_banking_messages`, `gmail_import_emails`, `user_emails`
+  - **Nuevos**: `get_live_messages`, `get_stored_messages`, `import_messages`
+- **✅ ROBUST ERROR HANDLING SYSTEM (RECIÉN IMPLEMENTADO)**:
+  - **Custom Exception Hierarchy**: AFPBaseException con categorías (VALIDATION, AUTHENTICATION, EXTERNAL, BUSINESS, SYSTEM, CONFIGURATION)
+  - **Structured Logging**: Sistema JSON con contexto, request IDs, user tracking, rotación de archivos
+  - **Error Middleware**: Intercepta errores, logging automático, respuestas consistentes
+  - **Health Checks**: Monitoreo de database, Redis, cache, disk space, memory, APIs externas
+  - **Error Tracking**: Contadores, rates, alertas automáticas, estadísticas
+  - **Migration Ready**: Arquitectura lista para Sentry/DataDog sin cambios de código
+  - **RESTful Structure**: `/api/integrations/{id}/messages/live/`, `/api/integrations/{id}/messages/stored/`, `/api/integrations/{id}/messages/import/`
+  - **Unified Filtering**: Query params para `type=all|banking|recent` en lugar de endpoints separados  
+  - **Deduplication**: Automática usando `provider_message_id` como clave única
+  - **Error Handling**: Manejo robusto de integraciones no encontradas y errores de API
 
 #### **⏳ PRÓXIMOS ENTREGABLES INMEDIATOS:**
-1. **🏗️ Workers de Celery** (3-5 días)
+1. **🧪 BCR Email Analysis Testing** (2-3 días)
+   - Probar scripts con emails reales del BCR
+   - Validar selectores CSS generados por OpenAI
+   - Refinar pipeline de extracción de datos
+   
+2. **🏗️ Secure Processing Workers** (3-5 días)
    - EmailImportWorker (Gmail API → EmailQueue)
-   - BasicProcessingWorker (EmailQueue → Transactions)
+   - SecureProcessingWorker (CSS selectors → Transactions)
    - NotificationWorker (Real-time updates)
 
 2. **📧 Gmail API Integration** (3-4 días)
@@ -198,6 +237,25 @@ afp-project/frontend/
    - Template improvement automation
 
 ### **🔧 COMANDOS PARA CONTINUAR:**
+
+#### **🧪 BCR Email Analysis Testing (PRÓXIMO PASO INMEDIATO)**
+```bash
+# 1. Setup test environment
+cd backend/scripts
+python setup_test_environment.py
+
+# 2. Set OpenAI API key
+export OPENAI_API_KEY='your-openai-api-key-here'
+
+# 3. Run BCR email analysis test
+python run_bcr_test.py
+# OR directly:
+python test_bcr_email_analysis.py
+
+# 4. Review results and validate extracted data
+```
+
+#### **🏗️ Backend + System Testing**
 ```bash
 # Backend + Redis funcionando:
 cd backend && python manage.py runserver
@@ -208,12 +266,14 @@ cd frontend && npm run dev
 # Redis Testing (VERIFIED):
 cd backend && python scripts/test_redis_connection.py
 
-# Próximos comandos - Workers de Celery:
+# Gmail Service Testing:
+cd backend && python manage.py shell
+>>> from core.gmail_service import GmailService
+>>> # Test Gmail connection
+
+# Próximos comandos - Secure Workers de Celery:
 cd backend && mkdir -p workers
 cd backend && python manage.py shell  # Testing Celery tasks
-
-# Gmail API setup (próximo):
-cd backend && pip install google-api-python-client google-auth-oauthlib
 ```
 
 ### **📋 PRÓXIMOS PASOS TÉCNICOS ESPECÍFICOS:**
@@ -654,4 +714,17 @@ cd backend && python manage.py shell
 # Verificar Frontend PWA:
 cd frontend && npm run dev
 # Visitar: http://localhost:3000
-``` 
+```
+
+## 🔄 Actualización de endpoints de Integraciones (Tokens OAuth)
+
+A partir de la refactorización de diciembre 2024, los endpoints correctos para la gestión de tokens de integración son:
+
+- **Obtener estado del token:**
+  - `GET /api/core/integrations/<id>/token-status/`
+- **Refrescar tokens:**
+  - `POST /api/core/integrations/<id>/refresh-tokens/`
+- **Revocar tokens:**
+  - `POST /api/core/integrations/<id>/revoke-tokens/`
+
+> **Nota:** Las rutas antiguas `/get-provider-token-status/`, `/refresh-provider-tokens/` y `/revoke-provider-tokens/` ya no existen. El frontend debe usar las rutas nuevas para evitar errores 404 y problemas de parsing JSON. 
